@@ -20,6 +20,7 @@ import { normalizeBundle } from "../../utils/normalizeBundle";
 import {
   AccountAuthenticator,
   AccountAuthenticatorEd25519,
+  AccountAuthenticatorNoAccountAuthenticator,
   AccountAuthenticatorSingleKey,
 } from "../authenticator/account";
 import {
@@ -438,6 +439,8 @@ export function generateSignedTransactionForSimulation(args: InputSimulateTransa
     );
   } else if (accountAuthenticator instanceof AccountAuthenticatorSingleKey) {
     transactionAuthenticator = new TransactionAuthenticatorSingleSender(accountAuthenticator);
+  } else if (accountAuthenticator instanceof AccountAuthenticatorNoAccountAuthenticator) {
+    transactionAuthenticator = new TransactionAuthenticatorSingleSender(accountAuthenticator);
   } else {
     throw new Error("Invalid public key");
   }
@@ -445,6 +448,11 @@ export function generateSignedTransactionForSimulation(args: InputSimulateTransa
 }
 
 export function getAuthenticatorForSimulation(publicKey: PublicKey) {
+  // TODO: check this.
+  if (publicKey.toString() === (new Ed25519PublicKey(new Uint8Array(32))).toString()) {
+    return new AccountAuthenticatorNoAccountAuthenticator();
+  }
+
   // No need to for the signature to be matching in scheme. All that matters for simulations is that it's not valid
   const invalidSignature = new Ed25519Signature(new Uint8Array(64));
 

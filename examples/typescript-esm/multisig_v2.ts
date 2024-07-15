@@ -21,6 +21,7 @@ import {
   Account,
   Aptos,
   AptosConfig,
+  Ed25519PublicKey,
   Network,
   NetworkToNetworkName,
   MoveString,
@@ -28,6 +29,7 @@ import {
   TransactionPayloadMultiSig,
   MultiSig,
   AccountAddress,
+  InputEntryFunctionData,
   InputViewFunctionData,
   SimpleTransaction,
   generateTransactionPayload,
@@ -131,6 +133,21 @@ const fundMultiSigAccount = async () => {
   await aptos.fundAccount({ accountAddress: multisigAddress, amount: 100_000_000 });
 };
 
+const simulateTransactionPayloadMultiSig = async (multisigAddress: AccountAddress, data: InputEntryFunctionData) => {
+  const rawTxn = await aptos.transaction.build.simple({
+    sender: multisigAddress,
+      data,
+      withFeePayer: true,
+    });
+    rawTxn.feePayerAddress = AccountAddress.ZERO;
+
+    await aptos.transaction.simulate.simple({
+      signerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+      transaction: rawTxn,
+      feePayerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+    });
+}
+
 const createMultiSigTransferTransaction = async () => {
   console.log("Creating a multisig transaction to transfer coins...");
 
@@ -142,15 +159,20 @@ const createMultiSigTransferTransaction = async () => {
   });
 
   // Simulate the transfer transaction to make sure it passes
-  const transactionToSimulate = await generateRawTransaction({
-    aptosConfig: config,
-    sender: owner2.accountAddress,
-    payload: transactionPayload,
-  });
+//  const transactionToSimulate = await generateRawTransaction({
+//    aptosConfig: config,
+//    sender: owner2.accountAddress,
+//    payload: transactionPayload,
+//  });
+//
+//  const simulateMultisigTx = await aptos.transaction.simulate.simple({
+//    signerPublicKey: owner2.publicKey,
+//    transaction: new SimpleTransaction(transactionToSimulate),
+//  });
 
-  const simulateMultisigTx = await aptos.transaction.simulate.simple({
-    signerPublicKey: owner2.publicKey,
-    transaction: new SimpleTransaction(transactionToSimulate),
+  const simulateMultisigTx = await simulateTransactionPayloadMultiSig(AccountAddress.fromString(multisigAddress), {
+    function: "0x1::aptos_account::transfer",
+    functionArguments: [recipient.accountAddress, 1_000_000],
   });
 
   console.log("simulateMultisigTx", simulateMultisigTx);

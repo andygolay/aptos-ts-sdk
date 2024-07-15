@@ -1,7 +1,9 @@
-import { Account, U64, SigningSchemeInput } from "../../../src";
+import { Account, U64, SigningSchemeInput, Ed25519PublicKey, AccountAddress } from "../../../src";
 import { longTestTimeout } from "../../unit/helper";
 import { getAptosClient } from "../helper";
 import { fundAccounts, multiSignerScriptBytecode, publishTransferPackage, singleSignerScriptBytecode } from "./helper";
+import { simulateTransaction } from "../../../src/internal/transactionSubmission";
+import { AccountAuthenticatorNoAccountAuthenticator } from "../../../src/transactions";
 
 describe("transaction simulation", () => {
   const { aptos } = getAptosClient();
@@ -9,7 +11,7 @@ describe("transaction simulation", () => {
   const singleSignerED25519SenderAccount = Account.generate({ scheme: SigningSchemeInput.Ed25519, legacy: false });
   const legacyED25519SenderAccount = Account.generate();
   const singleSignerSecp256k1Account = Account.generate({ scheme: SigningSchemeInput.Secp256k1Ecdsa });
-  const recieverAccounts = [Account.generate(), Account.generate()];
+  const receiverAccounts = [Account.generate(), Account.generate()];
   const secondarySignerAccount = Account.generate();
   const feePayerAccount = Account.generate();
   beforeAll(async () => {
@@ -18,7 +20,7 @@ describe("transaction simulation", () => {
       singleSignerED25519SenderAccount,
       singleSignerSecp256k1Account,
       legacyED25519SenderAccount,
-      ...recieverAccounts,
+      ...receiverAccounts,
       secondarySignerAccount,
       feePayerAccount,
     ]);
@@ -31,7 +33,7 @@ describe("transaction simulation", () => {
           sender: singleSignerED25519SenderAccount.accountAddress,
           data: {
             bytecode: singleSignerScriptBytecode,
-            functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+            functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -45,7 +47,7 @@ describe("transaction simulation", () => {
           sender: singleSignerED25519SenderAccount.accountAddress,
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -60,7 +62,7 @@ describe("transaction simulation", () => {
           data: {
             multisigAddress: secondarySignerAccount.accountAddress,
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -80,8 +82,8 @@ describe("transaction simulation", () => {
             functionArguments: [
               new U64(BigInt(100)),
               new U64(BigInt(200)),
-              recieverAccounts[0].accountAddress,
-              recieverAccounts[1].accountAddress,
+              receiverAccounts[0].accountAddress,
+              receiverAccounts[1].accountAddress,
               new U64(BigInt(50)),
             ],
           },
@@ -106,8 +108,8 @@ describe("transaction simulation", () => {
               functionArguments: [
                 new U64(100),
                 new U64(200),
-                recieverAccounts[0].accountAddress,
-                recieverAccounts[1].accountAddress,
+                receiverAccounts[0].accountAddress,
+                receiverAccounts[1].accountAddress,
                 new U64(50),
               ],
             },
@@ -129,7 +131,7 @@ describe("transaction simulation", () => {
           sender: singleSignerED25519SenderAccount.accountAddress,
           data: {
             bytecode: singleSignerScriptBytecode,
-            functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+            functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -147,7 +149,7 @@ describe("transaction simulation", () => {
           sender: singleSignerED25519SenderAccount.accountAddress,
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -166,7 +168,7 @@ describe("transaction simulation", () => {
           data: {
             multisigAddress: secondarySignerAccount.accountAddress,
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -188,8 +190,8 @@ describe("transaction simulation", () => {
             functionArguments: [
               new U64(100),
               new U64(200),
-              recieverAccounts[0].accountAddress,
-              recieverAccounts[1].accountAddress,
+              receiverAccounts[0].accountAddress,
+              receiverAccounts[1].accountAddress,
               new U64(50),
             ],
           },
@@ -214,7 +216,7 @@ describe("transaction simulation", () => {
           sender: singleSignerSecp256k1Account.accountAddress,
           data: {
             bytecode: singleSignerScriptBytecode,
-            functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+            functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -228,7 +230,7 @@ describe("transaction simulation", () => {
           sender: singleSignerSecp256k1Account.accountAddress,
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -243,7 +245,7 @@ describe("transaction simulation", () => {
           data: {
             multisigAddress: secondarySignerAccount.accountAddress,
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -263,8 +265,8 @@ describe("transaction simulation", () => {
             functionArguments: [
               new U64(BigInt(100)),
               new U64(BigInt(200)),
-              recieverAccounts[0].accountAddress,
-              recieverAccounts[1].accountAddress,
+              receiverAccounts[0].accountAddress,
+              receiverAccounts[1].accountAddress,
               new U64(BigInt(50)),
             ],
           },
@@ -289,8 +291,8 @@ describe("transaction simulation", () => {
               functionArguments: [
                 new U64(100),
                 new U64(200),
-                recieverAccounts[0].accountAddress,
-                recieverAccounts[1].accountAddress,
+                receiverAccounts[0].accountAddress,
+                receiverAccounts[1].accountAddress,
                 new U64(50),
               ],
             },
@@ -312,7 +314,7 @@ describe("transaction simulation", () => {
           sender: singleSignerSecp256k1Account.accountAddress,
           data: {
             bytecode: singleSignerScriptBytecode,
-            functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+            functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -330,7 +332,7 @@ describe("transaction simulation", () => {
           sender: singleSignerSecp256k1Account.accountAddress,
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -349,7 +351,7 @@ describe("transaction simulation", () => {
           data: {
             multisigAddress: secondarySignerAccount.accountAddress,
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -371,8 +373,8 @@ describe("transaction simulation", () => {
             functionArguments: [
               new U64(100),
               new U64(200),
-              recieverAccounts[0].accountAddress,
-              recieverAccounts[1].accountAddress,
+              receiverAccounts[0].accountAddress,
+              receiverAccounts[1].accountAddress,
               new U64(50),
             ],
           },
@@ -397,7 +399,7 @@ describe("transaction simulation", () => {
           sender: legacyED25519SenderAccount.accountAddress,
           data: {
             bytecode: singleSignerScriptBytecode,
-            functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+            functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -411,7 +413,7 @@ describe("transaction simulation", () => {
           sender: legacyED25519SenderAccount.accountAddress,
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -426,7 +428,7 @@ describe("transaction simulation", () => {
           data: {
             multisigAddress: secondarySignerAccount.accountAddress,
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
         });
         const [response] = await aptos.transaction.simulate.simple({
@@ -446,8 +448,8 @@ describe("transaction simulation", () => {
             functionArguments: [
               new U64(BigInt(100)),
               new U64(BigInt(200)),
-              recieverAccounts[0].accountAddress,
-              recieverAccounts[1].accountAddress,
+              receiverAccounts[0].accountAddress,
+              receiverAccounts[1].accountAddress,
               new U64(BigInt(50)),
             ],
           },
@@ -469,7 +471,7 @@ describe("transaction simulation", () => {
             secondarySignerAddresses: [secondarySignerAccount.accountAddress],
             data: {
               function: `${contractPublisherAccount.accountAddress}::transfer::two_by_two`,
-              functionArguments: [100, 200, recieverAccounts[0].accountAddress, recieverAccounts[1].accountAddress, 50],
+              functionArguments: [100, 200, receiverAccounts[0].accountAddress, receiverAccounts[1].accountAddress, 50],
             },
           });
 
@@ -489,7 +491,7 @@ describe("transaction simulation", () => {
           sender: legacyED25519SenderAccount.accountAddress,
           data: {
             bytecode: singleSignerScriptBytecode,
-            functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+            functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -507,7 +509,7 @@ describe("transaction simulation", () => {
           sender: legacyED25519SenderAccount.accountAddress,
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -526,7 +528,7 @@ describe("transaction simulation", () => {
           data: {
             multisigAddress: secondarySignerAccount.accountAddress,
             function: `${contractPublisherAccount.accountAddress}::transfer::transfer`,
-            functionArguments: [1, recieverAccounts[0].accountAddress],
+            functionArguments: [1, receiverAccounts[0].accountAddress],
           },
           withFeePayer: true,
         });
@@ -545,7 +547,7 @@ describe("transaction simulation", () => {
           secondarySignerAddresses: [secondarySignerAccount.accountAddress],
           data: {
             function: `${contractPublisherAccount.accountAddress}::transfer::two_by_two`,
-            functionArguments: [100, 200, recieverAccounts[0].accountAddress, recieverAccounts[1].accountAddress, 50],
+            functionArguments: [100, 200, receiverAccounts[0].accountAddress, receiverAccounts[1].accountAddress, 50],
           },
           withFeePayer: true,
         });
@@ -567,7 +569,7 @@ describe("transaction simulation", () => {
         sender: singleSignerSecp256k1Account.accountAddress,
         data: {
           bytecode: singleSignerScriptBytecode,
-          functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+          functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
         },
         withFeePayer: true,
       });
@@ -587,7 +589,7 @@ describe("transaction simulation", () => {
         secondarySignerAddresses: [secondarySignerAccount.accountAddress],
         data: {
           bytecode: singleSignerScriptBytecode,
-          functionArguments: [new U64(1), recieverAccounts[0].accountAddress],
+          functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
         },
         withFeePayer: true,
       });
@@ -601,5 +603,81 @@ describe("transaction simulation", () => {
         }),
       ).rejects.toThrow();
     });
+  });
+
+  describe("simulations with no account authenticator", () => {
+    test("single signer with script payload", async () => {
+      const transaction = await aptos.transaction.build.simple({
+        sender: singleSignerED25519SenderAccount.accountAddress,
+        data: {
+          bytecode: singleSignerScriptBytecode,
+          functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
+        },
+      });
+      const [response] = await simulateTransaction({
+        aptosConfig: aptos.config,
+        transaction,
+        signerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+      });
+      console.log("[JP] response");
+      console.log(response.success);
+      console.log(response.vm_status);
+      expect(response.success).toBeTruthy();
+    });
+  });
+  test("fee payer with script payload", async () => {
+    const rawTxn = await aptos.transaction.build.simple({
+      sender: legacyED25519SenderAccount.accountAddress,
+      data: {
+        bytecode: singleSignerScriptBytecode,
+        functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
+      },
+      withFeePayer: true,
+    });
+    rawTxn.feePayerAddress = feePayerAccount.accountAddress;
+
+    const [response] = await aptos.transaction.simulate.simple({
+      signerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+      transaction: rawTxn,
+      feePayerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+    });
+    expect(response.success).toBeTruthy();
+  });
+  test("fee payer as 0x0 with script payload", async () => {
+    const rawTxn = await aptos.transaction.build.simple({
+      sender: legacyED25519SenderAccount.accountAddress,
+      data: {
+        bytecode: singleSignerScriptBytecode,
+        functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
+      },
+      withFeePayer: true,
+    });
+    rawTxn.feePayerAddress = AccountAddress.ZERO;
+
+    const [response] = await aptos.transaction.simulate.simple({
+      signerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+      transaction: rawTxn,
+      feePayerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+    });
+    expect(response.success).toBeTruthy();
+  });
+  test("fee payer as 0x4 with script payload", async () => {
+    const rawTxn = await aptos.transaction.build.simple({
+      sender: legacyED25519SenderAccount.accountAddress,
+      data: {
+        bytecode: singleSignerScriptBytecode,
+        functionArguments: [new U64(1), receiverAccounts[0].accountAddress],
+      },
+      withFeePayer: true,
+    });
+    // A fee payer who does not have a sufficient fund.
+    rawTxn.feePayerAddress = AccountAddress.FOUR;
+
+    const [response] = await aptos.transaction.simulate.simple({
+      signerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+      transaction: rawTxn,
+      feePayerPublicKey: new Ed25519PublicKey(new Uint8Array(32)),
+    });
+    expect(response.vm_status).toContain("INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE");
   });
 });

@@ -24,6 +24,8 @@ export abstract class AccountAuthenticator extends Serializable {
         return AccountAuthenticatorSingleKey.load(deserializer);
       case AccountAuthenticatorVariant.MultiKey:
         return AccountAuthenticatorMultiKey.load(deserializer);
+      case AccountAuthenticatorVariant.NoAccountAuthenticator:
+        return AccountAuthenticatorNoAccountAuthenticator.load(deserializer);
       default:
         throw new Error(`Unknown variant index for AccountAuthenticator: ${index}`);
     }
@@ -167,5 +169,23 @@ export class AccountAuthenticatorMultiKey extends AccountAuthenticator {
     const public_keys = MultiKey.deserialize(deserializer);
     const signatures = MultiKeySignature.deserialize(deserializer);
     return new AccountAuthenticatorMultiKey(public_keys, signatures);
+  }
+}
+
+/**
+ * AccountAuthenticatorNoAccountAuthenticator for no account authenticator
+ */
+export class AccountAuthenticatorNoAccountAuthenticator extends AccountAuthenticator {
+
+  constructor() {
+    super();
+  }
+
+  serialize(serializer: Serializer): void {
+    serializer.serializeU32AsUleb128(AccountAuthenticatorVariant.NoAccountAuthenticator);
+  }
+
+  static load(deserializer: Deserializer): AccountAuthenticatorNoAccountAuthenticator {
+    return new AccountAuthenticatorNoAccountAuthenticator();
   }
 }
